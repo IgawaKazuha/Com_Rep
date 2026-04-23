@@ -935,5 +935,12 @@
   <p>Built with ExtendScript for Adobe After Effects</p>
 </footer>
 
+<script>
+  if ("scrollRestoration" in history) history.scrollRestoration = "manual";
+  window.addEventListener("pageshow", function () {
+    window.scrollTo(0, 0);
+  });
+</script>
+
 </body>
 </html>
