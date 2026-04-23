@@ -1,0 +1,903 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Com_Rep — Composition Replicator for After Effects</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Noto+Sans+JP:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0a0a0c;
+    --bg-2: #111116;
+    --bg-3: #18181f;
+    --bg-4: #1e1e28;
+    --border: rgba(255,255,255,0.07);
+    --border-accent: rgba(82,160,255,0.3);
+    --text: #e8e8f0;
+    --text-2: #9090a8;
+    --text-3: #5a5a72;
+    --accent: #52a0ff;
+    --accent-dim: rgba(82,160,255,0.12);
+    --accent-glow: rgba(82,160,255,0.06);
+    --green: #3ecf8e;
+    --green-dim: rgba(62,207,142,0.1);
+    --mono: 'Space Mono', monospace;
+    --sans: 'Noto Sans JP', sans-serif;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-weight: 300;
+    line-height: 1.7;
+    overflow-x: hidden;
+  }
+
+  /* ── NOISE OVERLAY ── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.4;
+  }
+
+  /* ── GRID LINES ── */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(var(--border) 1px, transparent 1px),
+      linear-gradient(90deg, var(--border) 1px, transparent 1px);
+    background-size: 80px 80px;
+    pointer-events: none;
+    z-index: 0;
+    mask-image: radial-gradient(ellipse 80% 80% at 50% 0%, black 0%, transparent 70%);
+  }
+
+  /* ── NAV ── */
+  nav {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 100;
+    padding: 1rem 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+    background: rgba(10,10,12,0.8);
+    backdrop-filter: blur(12px);
+  }
+
+  .nav-logo {
+    font-family: var(--mono);
+    font-size: 0.9rem;
+    color: var(--accent);
+    letter-spacing: 0.05em;
+  }
+
+  .nav-links { display: flex; gap: 2rem; }
+  .nav-links a {
+    font-size: 0.8rem;
+    color: var(--text-2);
+    text-decoration: none;
+    font-family: var(--mono);
+    letter-spacing: 0.05em;
+    transition: color 0.2s;
+  }
+  .nav-links a:hover { color: var(--text); }
+
+  /* ── HERO ── */
+  .hero {
+    position: relative;
+    z-index: 1;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 8rem 2rem 6rem;
+  }
+
+  .hero-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: var(--accent);
+    border: 1px solid var(--border-accent);
+    background: var(--accent-dim);
+    padding: 0.35rem 0.9rem;
+    border-radius: 2px;
+    letter-spacing: 0.1em;
+    margin-bottom: 2.5rem;
+    animation: fadeup 0.6s ease both;
+  }
+
+  .hero-badge::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    background: var(--accent);
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  .hero h1 {
+    font-family: var(--mono);
+    font-size: clamp(3.5rem, 10vw, 7rem);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1;
+    color: var(--text);
+    margin-bottom: 0.5rem;
+    animation: fadeup 0.6s 0.1s ease both;
+  }
+
+  .hero h1 span { color: var(--accent); }
+
+  .hero-sub {
+    font-family: var(--mono);
+    font-size: 0.85rem;
+    color: var(--text-3);
+    letter-spacing: 0.15em;
+    margin-bottom: 2rem;
+    animation: fadeup 0.6s 0.15s ease both;
+  }
+
+  .hero-desc {
+    max-width: 520px;
+    font-size: 1rem;
+    color: var(--text-2);
+    line-height: 1.8;
+    margin-bottom: 3rem;
+    animation: fadeup 0.6s 0.2s ease both;
+  }
+
+  .hero-actions {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    justify-content: center;
+    animation: fadeup 0.6s 0.25s ease both;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-family: var(--mono);
+    font-size: 0.8rem;
+    letter-spacing: 0.05em;
+    padding: 0.75rem 1.75rem;
+    border-radius: 2px;
+    text-decoration: none;
+    transition: all 0.2s;
+    cursor: pointer;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: #0a0a0c;
+    border: 1px solid var(--accent);
+    font-weight: 700;
+  }
+  .btn-primary:hover { background: #74b4ff; border-color: #74b4ff; }
+
+  .btn-ghost {
+    background: transparent;
+    color: var(--text-2);
+    border: 1px solid var(--border);
+  }
+  .btn-ghost:hover { border-color: var(--border-accent); color: var(--text); }
+
+  @keyframes fadeup {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ── SCROLL LINE ── */
+  .scroll-hint {
+    position: absolute;
+    bottom: 2.5rem;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    opacity: 0.3;
+    animation: fadeup 1s 0.8s ease both;
+  }
+  .scroll-hint span { font-family: var(--mono); font-size: 0.65rem; letter-spacing: 0.15em; color: var(--text-3); }
+  .scroll-line {
+    width: 1px;
+    height: 40px;
+    background: linear-gradient(to bottom, var(--text-3), transparent);
+    animation: scrolldown 1.5s ease-in-out infinite;
+  }
+  @keyframes scrolldown {
+    0% { transform: scaleY(0); transform-origin: top; }
+    50% { transform: scaleY(1); transform-origin: top; }
+    51% { transform-origin: bottom; }
+    100% { transform: scaleY(0); transform-origin: bottom; }
+  }
+
+  /* ── SECTIONS ── */
+  section {
+    position: relative;
+    z-index: 1;
+    padding: 6rem 2rem;
+    max-width: 1000px;
+    margin: 0 auto;
+  }
+
+  .section-label {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.2em;
+    color: var(--accent);
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+  .section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border-accent);
+    max-width: 60px;
+  }
+
+  .section-title {
+    font-family: var(--mono);
+    font-size: clamp(1.6rem, 4vw, 2.2rem);
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 3rem;
+    line-height: 1.2;
+  }
+
+  /* ── UI PREVIEW ── */
+  .ui-preview-wrap {
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: var(--bg-2);
+    overflow: hidden;
+    margin-bottom: 1rem;
+  }
+
+  .ui-preview-bar {
+    padding: 0.6rem 1rem;
+    background: var(--bg-3);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .ui-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+  }
+  .ui-dot-r { background: #ff5f57; }
+  .ui-dot-y { background: #febc2e; }
+  .ui-dot-g { background: #28c840; }
+
+  .ui-bar-title {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: var(--text-3);
+    margin-left: 0.5rem;
+  }
+
+  .ui-preview-inner {
+    padding: 1.5rem;
+    background: #1a1a22;
+  }
+
+  /* AE UI mockup */
+  .ae-panel {
+    background: #1e1e26;
+    border: 1px solid #2a2a38;
+    border-radius: 3px;
+    padding: 1rem;
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    color: #c0c0d8;
+  }
+
+  .ae-section {
+    border: 1px solid #2a2a38;
+    border-radius: 2px;
+    margin-bottom: 0.75rem;
+    overflow: hidden;
+  }
+
+  .ae-section-title {
+    background: #252530;
+    padding: 0.4rem 0.75rem;
+    font-size: 0.7rem;
+    color: #8888a8;
+    letter-spacing: 0.05em;
+  }
+
+  .ae-section-body { padding: 0.75rem; }
+
+  .ae-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .ae-radio {
+    width: 11px;
+    height: 11px;
+    border: 1px solid #5050a0;
+    border-radius: 50%;
+    position: relative;
+    flex-shrink: 0;
+  }
+  .ae-radio.active::after {
+    content: '';
+    position: absolute;
+    inset: 2px;
+    background: var(--accent);
+    border-radius: 50%;
+  }
+
+  .ae-label { color: #9090b8; }
+  .ae-label.active { color: #d0d0f0; }
+
+  .ae-input {
+    background: #141420;
+    border: 1px solid #2a2a40;
+    border-radius: 2px;
+    padding: 0.3rem 0.6rem;
+    color: #8888a8;
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    width: 100%;
+  }
+
+  .ae-dropdown {
+    background: #141420;
+    border: 1px solid #2a2a40;
+    border-radius: 2px;
+    padding: 0.3rem 0.6rem;
+    color: #d0d0f0;
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .ae-dropdown::after { content: '▾'; color: #5050a0; }
+
+  .ae-textarea {
+    background: #141420;
+    border: 1px solid #2a2a40;
+    border-radius: 2px;
+    padding: 0.5rem 0.6rem;
+    color: #d0d0f0;
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    width: 100%;
+    line-height: 1.7;
+  }
+
+  .ae-btn {
+    background: #252530;
+    border: 1px solid #3a3a50;
+    border-radius: 2px;
+    padding: 0.35rem 0.75rem;
+    color: #c0c0d8;
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    width: 100%;
+    text-align: center;
+    cursor: default;
+  }
+
+  .ae-btn-run {
+    background: var(--accent-dim);
+    border: 1px solid var(--border-accent);
+    color: var(--accent);
+    margin-top: 0.25rem;
+  }
+
+  .ae-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+  }
+  .ae-check-box {
+    width: 11px;
+    height: 11px;
+    border: 1px solid #5050a0;
+    border-radius: 1px;
+    background: var(--accent-dim);
+    position: relative;
+    flex-shrink: 0;
+  }
+  .ae-check-box::after {
+    content: '✓';
+    position: absolute;
+    top: -1px;
+    left: 1px;
+    font-size: 9px;
+    color: var(--accent);
+  }
+
+  /* ── STEPS ── */
+  .steps { display: flex; flex-direction: column; gap: 0; }
+
+  .step {
+    display: grid;
+    grid-template-columns: 60px 1fr;
+    gap: 0 2rem;
+    position: relative;
+  }
+
+  .step:not(:last-child)::before {
+    content: '';
+    position: absolute;
+    left: 29px;
+    top: 52px;
+    bottom: -1px;
+    width: 1px;
+    background: var(--border);
+  }
+
+  .step-num {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-top: 1.5rem;
+  }
+
+  .step-circle {
+    width: 40px;
+    height: 40px;
+    border: 1px solid var(--border-accent);
+    border-radius: 50%;
+    background: var(--accent-dim);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--mono);
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--accent);
+    flex-shrink: 0;
+  }
+
+  .step-content {
+    padding: 1.5rem 0 3rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .step:last-child .step-content { border-bottom: none; }
+
+  .step-title {
+    font-family: var(--mono);
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 0.5rem;
+  }
+
+  .step-desc {
+    font-size: 0.9rem;
+    color: var(--text-2);
+    line-height: 1.8;
+  }
+
+  .step-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-family: var(--mono);
+    font-size: 0.68rem;
+    color: var(--green);
+    background: var(--green-dim);
+    border: 1px solid rgba(62,207,142,0.2);
+    padding: 0.2rem 0.6rem;
+    border-radius: 2px;
+    margin-top: 0.75rem;
+  }
+
+  /* ── FEATURES ── */
+  .features-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .feature-card {
+    background: var(--bg-2);
+    padding: 1.75rem;
+    transition: background 0.2s;
+  }
+  .feature-card:hover { background: var(--bg-3); }
+
+  .feature-icon {
+    width: 36px;
+    height: 36px;
+    border: 1px solid var(--border-accent);
+    border-radius: 3px;
+    background: var(--accent-dim);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 1rem;
+    font-size: 16px;
+  }
+
+  .feature-title {
+    font-family: var(--mono);
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 0.5rem;
+  }
+
+  .feature-desc {
+    font-size: 0.85rem;
+    color: var(--text-2);
+    line-height: 1.7;
+  }
+
+  /* ── CODE BLOCK ── */
+  .code-block {
+    background: var(--bg-3);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+    margin: 1.5rem 0;
+  }
+  .code-header {
+    padding: 0.6rem 1rem;
+    background: var(--bg-4);
+    border-bottom: 1px solid var(--border);
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    color: var(--text-3);
+    letter-spacing: 0.05em;
+  }
+  .code-body {
+    padding: 1.25rem 1.5rem;
+    font-family: var(--mono);
+    font-size: 0.8rem;
+    line-height: 1.8;
+    color: var(--text-2);
+    overflow-x: auto;
+  }
+  .code-body .kw { color: var(--accent); }
+  .code-body .str { color: var(--green); }
+  .code-body .cm { color: var(--text-3); }
+  .code-body .fn { color: #d4a0ff; }
+
+  /* ── FOOTER ── */
+  footer {
+    position: relative;
+    z-index: 1;
+    border-top: 1px solid var(--border);
+    padding: 3rem 2rem;
+    text-align: center;
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    color: var(--text-3);
+    letter-spacing: 0.05em;
+  }
+  footer a { color: var(--text-3); text-decoration: none; }
+  footer a:hover { color: var(--accent); }
+
+  /* ── DIVIDER ── */
+  .full-divider {
+    position: relative;
+    z-index: 1;
+    height: 1px;
+    background: var(--border);
+    max-width: 100%;
+  }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 640px) {
+    nav { padding: 1rem; }
+    .nav-links { gap: 1rem; }
+    .hero { padding: 7rem 1.5rem 4rem; }
+    section { padding: 4rem 1.5rem; }
+    .step { grid-template-columns: 48px 1fr; gap: 0 1rem; }
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">Com_Rep</div>
+  <div class="nav-links">
+    <a href="#preview">Preview</a>
+    <a href="#usage">Usage</a>
+    <a href="#install">Install</a>
+    <a href="https://github.com/" target="_blank">GitHub</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-badge">ExtendScript · Adobe After Effects</div>
+  <h1>Com<span>_</span>Rep</h1>
+  <p class="hero-sub">COMPOSITION REPLICATOR</p>
+  <p class="hero-desc">
+    テンプレートコンポジションを指定してカット名リストを入力するだけ。<br>
+    複製・リネーム・フォルダ整理を一括で実行する After Effects 用スクリプト。
+  </p>
+  <div class="hero-actions">
+    <a class="btn btn-primary" href="https://github.com/" target="_blank">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.745 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>
+      ダウンロード
+    </a>
+    <a class="btn btn-ghost" href="#usage">使い方を見る →</a>
+  </div>
+  <div class="scroll-hint">
+    <div class="scroll-line"></div>
+    <span>SCROLL</span>
+  </div>
+</div>
+
+<div class="full-divider"></div>
+
+<!-- FEATURES -->
+<section id="features">
+  <div class="section-label">FEATURES</div>
+  <h2 class="section-title">何ができるか</h2>
+  <div class="features-grid">
+    <div class="feature-card">
+      <div class="feature-icon">⧉</div>
+      <div class="feature-title">一括複製</div>
+      <div class="feature-desc">カット名リストを改行区切りで入力するだけで、指定したテンプレートから全カットを一括生成。</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">◫</div>
+      <div class="feature-title">フォルダ構造の複製</div>
+      <div class="feature-desc">コンポ単体だけでなくフォルダごと複製可能。サブフォルダ構造を保ったまま再現します。</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">⌗</div>
+      <div class="feature-title">命名規則の自動適用</div>
+      <div class="feature-desc">プロジェクト名 + カット名の形式で自動リネーム。プレビュー確認後に実行されます。</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">↩</div>
+      <div class="feature-title">Undo 対応</div>
+      <div class="feature-desc">生成処理全体を Undo グループでまとめているため、Ctrl+Z で一括取り消しができます。</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">▣</div>
+      <div class="feature-title">ドッキングパネル対応</div>
+      <div class="feature-desc">ScriptUI Panels フォルダに置けばウィンドウメニューから常駐パネルとして使えます。</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">◎</div>
+      <div class="feature-title">保存先の指定</div>
+      <div class="feature-desc">生成フォルダをプロジェクトルートまたは既存の任意フォルダ以下に配置できます。</div>
+    </div>
+  </div>
+</section>
+
+<div class="full-divider"></div>
+
+<!-- PREVIEW -->
+<section id="preview">
+  <div class="section-label">UI PREVIEW</div>
+  <h2 class="section-title">パネルの構成</h2>
+
+  <div class="ui-preview-wrap">
+    <div class="ui-preview-bar">
+      <div class="ui-dot ui-dot-r"></div>
+      <div class="ui-dot ui-dot-y"></div>
+      <div class="ui-dot ui-dot-g"></div>
+      <span class="ui-bar-title">Com_Rep — Adobe After Effects</span>
+    </div>
+    <div class="ui-preview-inner">
+      <div class="ae-panel">
+
+        <div class="ae-section">
+          <div class="ae-section-title">1. プロジェクト・フォルダ名</div>
+          <div class="ae-section-body">
+            <div class="ae-row">
+              <div class="ae-radio active"></div>
+              <span class="ae-label active">ファイル名を使う（自動）</span>
+              <div class="ae-radio"></div>
+              <span class="ae-label">自分で打つ（カスタム）</span>
+            </div>
+            <div class="ae-input" style="color:#5a5a8a;">MyProject</div>
+          </div>
+        </div>
+
+        <div class="ae-section">
+          <div class="ae-section-title">コピー元のデザイン（雛形）を選択</div>
+          <div class="ae-section-body">
+            <div class="ae-row" style="margin-bottom:0.75rem;">
+              <div class="ae-radio active"></div>
+              <span class="ae-label active">ファイル（コンポ）</span>
+              <div class="ae-radio"></div>
+              <span class="ae-label">フォルダ</span>
+            </div>
+            <div class="ae-dropdown" style="margin-bottom:0.5rem;">01_Template_Master</div>
+            <div class="ae-row" style="margin-bottom:0.5rem;">
+              <span class="ae-label" style="white-space:nowrap;">エンコード用コンポ:</span>
+              <div class="ae-dropdown" style="color:#5a5a8a;">—</div>
+            </div>
+            <div class="ae-row">
+              <span class="ae-label" style="white-space:nowrap;">保存先階層:</span>
+              <div class="ae-dropdown">[Root] プロジェクト直下</div>
+            </div>
+            <div class="ae-btn" style="margin-top:0.5rem;">リスト更新</div>
+          </div>
+        </div>
+
+        <div class="ae-section">
+          <div class="ae-section-title">生成名リスト</div>
+          <div class="ae-section-body">
+            <div class="ae-checkbox">
+              <div class="ae-check-box"></div>
+              <span class="ae-label active">一括生成モード（改行区切りリストを使う）</span>
+            </div>
+            <div class="ae-textarea">
+              Intro<br>Motion_A<br>Motion_B<br>VFX_Shot<br>Outro
+            </div>
+          </div>
+        </div>
+
+        <div class="ae-btn ae-btn-run">フォルダとリストを生成</div>
+      </div>
+    </div>
+  </div>
+  <p style="font-family:var(--mono);font-size:0.72rem;color:var(--text-3);letter-spacing:0.05em;">
+    ↑ UIモックアップ。実際のスクリーンショットはここに差し替えてください。
+  </p>
+</section>
+
+<div class="full-divider"></div>
+
+<!-- USAGE -->
+<section id="usage">
+  <div class="section-label">USAGE</div>
+  <h2 class="section-title">使い方</h2>
+
+  <div class="steps">
+
+    <div class="step">
+      <div class="step-num"><div class="step-circle">01</div></div>
+      <div class="step-content">
+        <div class="step-title">フォルダ名を設定する</div>
+        <div class="step-desc">
+          「ファイル名を使う（自動）」を選ぶと、開いている .aep ファイルの名前が自動で入力されます。
+          別の名前をつけたい場合は「自分で打つ（カスタム）」に切り替えて入力してください。
+        </div>
+        <div class="step-tag">自動 / カスタムの切り替え対応</div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num"><div class="step-circle">02</div></div>
+      <div class="step-content">
+        <div class="step-title">雛形を選ぶ</div>
+        <div class="step-desc">
+          「ファイル（コンポ）」モードでコンポジション単体を選ぶか、「フォルダ」モードでフォルダ構造ごと複製するかを選択します。
+          フォルダモードでは、エンコード用コンポ（リネーム対象）を指定してください。
+          プロジェクトを更新した場合は「リスト更新」ボタンを押してください。
+        </div>
+        <div class="step-tag">同名コンポが複数あっても正しく識別</div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num"><div class="step-circle">03</div></div>
+      <div class="step-content">
+        <div class="step-title">カット名を入力する</div>
+        <div class="step-desc">
+          テキストエリアに生成したいカット名を1行ずつ入力します。
+          1件だけ生成したい場合は「一括生成モード」のチェックを外してください。
+        </div>
+        <div class="code-block">
+          <div class="code-header">生成名リスト（例）</div>
+          <div class="code-body">Intro<br>Motion_A<br>Motion_B<br>VFX_Shot<br>Outro</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num"><div class="step-circle">04</div></div>
+      <div class="step-content">
+        <div class="step-title">保存先を選んで実行</div>
+        <div class="step-desc">
+          保存先階層のドロップダウンで生成フォルダの配置先を指定します。
+          「フォルダとリストを生成」ボタンを押すと、生成内容のプレビューが表示されます。
+          確認して「OK」を押すと処理が実行されます。
+        </div>
+        <div class="code-block">
+          <div class="code-header">生成されるコンポジション名（例）</div>
+          <div class="code-body">
+            <span class="str">MyProject_Intro</span><br>
+            <span class="str">MyProject_Motion_A</span><br>
+            <span class="str">MyProject_Motion_B</span><br>
+            <span class="str">MyProject_VFX_Shot</span><br>
+            <span class="str">MyProject_Outro</span>
+          </div>
+        </div>
+        <div class="step-tag">Ctrl+Z で一括取り消し対応</div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<div class="full-divider"></div>
+
+<!-- INSTALL -->
+<section id="install">
+  <div class="section-label">INSTALL</div>
+  <h2 class="section-title">インストール</h2>
+
+  <div class="code-block">
+    <div class="code-header">方法 A — スクリプトとして実行</div>
+    <div class="code-body">
+      <span class="cm"># After Effects メニューから</span><br>
+      ファイル &gt; スクリプト &gt; スクリプトファイルを実行<br>
+      <span class="str">Com_Rep.jsx</span> を選択
+    </div>
+  </div>
+
+  <div class="code-block">
+    <div class="code-header">方法 B — ドッキングパネルとして常駐（推奨）</div>
+    <div class="code-body">
+      <span class="cm"># Windows</span><br>
+      <span class="str">C:\Program Files\Adobe\Adobe After Effects &lt;ver&gt;\Support Files\Scripts\ScriptUI Panels\</span><br><br>
+      <span class="cm"># macOS</span><br>
+      <span class="str">/Applications/Adobe After Effects &lt;ver&gt;/Scripts/ScriptUI Panels/</span><br><br>
+      <span class="cm"># 上記フォルダに Com_Rep.jsx を配置し、AE を再起動</span><br>
+      ウィンドウメニューに <span class="kw">Com_Rep</span> が追加される
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <p style="margin-bottom:0.5rem;">
+    <a href="https://github.com/">Com_Rep</a> · MIT License · © 2025 夕凪
+  </p>
+  <p>Built with ExtendScript for Adobe After Effects</p>
+</footer>
+
+</body>
+</html>
