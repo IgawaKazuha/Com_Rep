@@ -646,6 +646,7 @@
   <div class="nav-links">
     <a href="#preview">Preview</a>
     <a href="#usage">Usage</a>
+    <a href="#outlook">Outlook</a>
     <a href="#install">Install</a>
     <a href="https://github.com/IgawaKazuha/Com_Rep"target="_blank">GitHub</a>
   </div>
@@ -859,6 +860,41 @@
       </div>
     </div>
 
+  </div>
+</section>
+
+<div class="full-divider"></div>
+
+<!-- OUTLOOK -->
+<section id="outlook">
+  <div class="section-label">OUTLOOK</div>
+  <h2 class="section-title">難しかった点と今後の展望</h2>
+  <div class="features-grid">
+    <div class="feature-card">
+      <div class="feature-icon">⚠</div>
+      <div class="feature-title">実装で難しかった点</div>
+      <div class="feature-desc">
+        フォルダ複製時にコピー先をコピー元配下へ置くと、再帰的に入れ子化する問題（マトリョシカ化）が発生しやすく、
+        コピー対象のスナップショット化・保存先判定・命名衝突回避の整合を取るのが最も難しいポイントでした。
+      </div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">↗</div>
+      <div class="feature-title">DCCツールへの展開</div>
+      <div class="feature-desc">
+        この仕組みは AE 以外の DCC（Blender / Maya / Houdini / C4D）にも応用可能です。
+        テンプレート選択・一括複製・命名規則適用・差し替え対象指定を共通化することで、
+        ショット量産やバリエーション生成の基盤ツールとして展開できます。
+      </div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🧩</div>
+      <div class="feature-title">次の改善案</div>
+      <div class="feature-desc">
+        プリセット（命名規則 / 保存先 / 差し替え項目）を保存・読み込みできるようにし、
+        チーム運用向けに設定の再利用性を高める予定です。将来的には JSON ベースの設定共有も想定しています。
+      </div>
+    </div>
   </div>
 </section>
 
