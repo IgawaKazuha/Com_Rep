@@ -306,7 +306,7 @@
         }
 
         if (!(selectedTemplate instanceof FolderItem) && !(masterComp instanceof CompItem)) {
-            alert("選択した雛形コンポが見つかりません。");
+            alert("選択した雛形コンポ・フォルダが見つかりません。");
             return;
         }
 
@@ -337,7 +337,7 @@
 
         if (!confirm(preview)) return;
 
-        app.beginUndoGroup("Create Portfolio Folder and List");
+        app.beginUndoGroup("Create Com_Rep Folder and List");
         var targetFolder = getOrCreateChildFolder(effectiveSaveParent, targetFolderName);
 
         for (var n = 0; n < works.length; n++) {
